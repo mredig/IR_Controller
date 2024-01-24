@@ -12,7 +12,7 @@ let pwms = SwiftyGPIO.hardwarePWMs(for: .RaspberryPi4)
 @main
 struct IR_Controller: AsyncParsableCommand {
 
-	private static let data: [UInt32] = [
+	private static let data: [UInt8] = [
 		180, 80, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 30, 10, 30, 10, 30, 10, 30,
 		10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
 		10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10
@@ -21,34 +21,34 @@ struct IR_Controller: AsyncParsableCommand {
 	private static let timer = PrecisionTimer()
 
 	mutating func run() async throws {
-//		guard
-//			let pwm = pwms?[1]?[.P13]
-//		else { throw IRError.noPWM }
+		guard
+			let pwm = pwms?[1]?[.P13]
+		else { throw IRError.noPWM }
 
 //		pwm.initPWM()
 
-		guard
-			let pin = gpios[.P13]
-		else { throw IRError.noGPIO }
-		pin.direction = .OUT
-
-		while true {
-			print("Start")
-			nonsignal(pin: pin)
-			print("Stop")
-			sleep(2)
-		}
-
-		while true {
-//			pwm?.initPWMPattern(bytes: data.count, at: 38000, with: 6000, dutyzero: 33, dutyone: 66)
+//		guard
+//			let pin = gpios[.P13]
+//		else { throw IRError.noGPIO }
+//		pin.direction = .OUT
 //
-//			pwm?.sendDataWithPattern(values: data)
-//			pwm?.waitOnSendData()
-//			pwm?.cleanupPattern()
-//			print("sending")
+//		while true {
+//			print("Start")
+//			nonsignal(pin: pin)
+//			print("Stop")
+//			sleep(2)
+//		}
+
+		while true {
+			print("sending")
+			pwm.initPWMPattern(bytes: Self.data.count, at: 38000, with: 6000, dutyzero: 66, dutyone: 33)
+
+			pwm.sendDataWithPattern(values: Self.data)
+			pwm.waitOnSendData()
+			pwm.cleanupPattern()
 //			signal(pwm: pwm)
-//			print("sent")
-//			sleep(1)
+			print("sent")
+			sleep(1)
 		}
 
 //		gpios[.P4]?.direction = .OUT
@@ -63,13 +63,10 @@ struct IR_Controller: AsyncParsableCommand {
 	}
 
 	func nonsignal(pin: GPIO) {
-//		var ts = timespec()
-
 		pin.value = 0
 		var passage: [(Int, Bool)] = .init(unsafeUninitializedCapacity: 100) { buffer, initializedCount in
 			initializedCount = 0
 		}
-//		clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
 		passage.append((Self.timer.getTime(), false))
 
 		for i in 0..<50 {
@@ -82,60 +79,59 @@ struct IR_Controller: AsyncParsableCommand {
 		var previousTime = passage[0].0
 		for (time, isOn) in passage[1...] {
 			let elapsed = time - previousTime
-//			print("\(elapsed) ns")
 			print("\(elapsed) nanoseconds, \(isOn)")
 			previousTime = time
 		}
 		print("\(passage.last!.0 - passage.first!.0) total")
 	}
 
-	func signal(pwm: PWMOutput) {
-		let data = Self.data.map { $0 * 1000 }
-
-		var ts = timespec()
-
-		var isOn = false
-
-		var passage: [Int] = .init(unsafeUninitializedCapacity: 100) { buffer, initializedCount in
-			initializedCount = 0
-		}
-		clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-		passage.append(ts.tv_nsec)
-
-		for period in data {
-			defer {
-				clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-				passage.append(ts.tv_nsec)
-			}
-
-			if isOn {
-				isOn = false
-				pwm.stopPWM()
-				delay(period)
-			} else {
-				isOn = true
-				pwm.startPWM(period: 26316, duty: 50)
-				delay(period)
-			}
-		}
-		pwm.stopPWM()
-//		print("Starting")
-//		pwm.startPWM(period: 26316, duty: 50)
-//		sleep(2)
-//		print("Stopping")
+//	func signal(pwm: PWMOutput) {
+//		let data = Self.data.map { $0 * 1000 }
+//
+//		var ts = timespec()
+//
+//		var isOn = false
+//
+//		var passage: [Int] = .init(unsafeUninitializedCapacity: 100) { buffer, initializedCount in
+//			initializedCount = 0
+//		}
+//		clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
+//		passage.append(ts.tv_nsec)
+//
+//		for period in data {
+//			defer {
+//				clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
+//				passage.append(ts.tv_nsec)
+//			}
+//
+//			if isOn {
+//				isOn = false
+//				pwm.stopPWM()
+//				delay(period)
+//			} else {
+//				isOn = true
+//				pwm.startPWM(period: 26316, duty: 50)
+//				delay(period)
+//			}
+//		}
 //		pwm.stopPWM()
-//		sleep(2)
-//		pwm.waitOnSendData()
-		var previousTime = 0
-		for time in passage {
-			let elapsed = time - previousTime
-//			print("\(elapsed) ns")
-			print("\(elapsed / 1000) microseconds")
-			previousTime = time
-		}
-		let expected = data.reduce(0, +)
-		print("\((passage.last! - passage.first!) / 1000) total, \(expected / 1000) expected")
-	}
+////		print("Starting")
+////		pwm.startPWM(period: 26316, duty: 50)
+////		sleep(2)
+////		print("Stopping")
+////		pwm.stopPWM()
+////		sleep(2)
+////		pwm.waitOnSendData()
+//		var previousTime = 0
+//		for time in passage {
+//			let elapsed = time - previousTime
+////			print("\(elapsed) ns")
+//			print("\(elapsed / 1000) microseconds")
+//			previousTime = time
+//		}
+//		let expected = data.reduce(0, +)
+//		print("\((passage.last! - passage.first!) / 1000) total, \(expected / 1000) expected")
+//	}
 
 	@inline(__always)
 	private func delay(_ nanoseconds: UInt32) {
