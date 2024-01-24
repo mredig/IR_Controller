@@ -34,7 +34,7 @@ struct IR_Controller: AsyncParsableCommand {
 
 		while true {
 			print("Start")
-			nonsignal(pin: pin)
+			nonsignal(pin: pin, hertz: 38000)
 			print("Stop")
 			sleep(2)
 		}
@@ -62,7 +62,7 @@ struct IR_Controller: AsyncParsableCommand {
 //		}
 	}
 
-	func nonsignal(pin: GPIO) {
+	func nonsignal(pin: GPIO, hertz: Int) {
 		let timer = Self.timer
 
 		pin.value = 0
@@ -73,30 +73,59 @@ struct IR_Controller: AsyncParsableCommand {
 
 		let nsData = Self.data.map { Int($0) * 1000 }
 
+//		var shouldPulse = true
+//		for datum in nsData {
+//			let dataStart = timer.getTime()
+//			let timerEnd = dataStart + datum
+//			defer { shouldPulse.toggle() }
+//			
+//			var isOn = false
+//			var currentTime = timer.getTime()
+//			var lastPulse = currentTime
+//			while currentTime < timerEnd {
+//				defer { currentTime = timer.getTime() }
+//				passage.append((currentTime, isOn))
+//				guard shouldPulse else { continue }
+//				guard currentTime > lastPulse + 13158 else { continue }
+//				pin.value = isOn ? 0 : 1
+//				isOn.toggle()
+//				lastPulse = currentTime
+//			}
+//			pin.value = 0
+//		}
+
+		let nsFromHertz = (1_000_000_000.0 / Double(hertz))
+		let halfPeriod = nsFromHertz / 2
+		let nsHalfPeriod = Int(halfPeriod)
+
+		var isOn = false
 		var shouldPulse = true
-		for datum in nsData {
-			let dataStart = timer.getTime()
-			let timerEnd = dataStart + datum
-			defer { shouldPulse.toggle() }
+		var nextToggle = timer.getTime() + nsHalfPeriod
+
+		var dataOut: [Int] = [timer.getTime()]
+
+		var dataIndex = 0
+		var nextDataToggle = timer.getTime() + nsData[dataIndex]
+		while dataIndex < (nsData.endIndex - 1) {
+			let currentTime = timer.getTime()
+
+			guard currentTime >= nextToggle else { continue }
 			
-			var isOn = false
-			var currentTime = timer.getTime()
-			var lastPulse = currentTime
-			while currentTime < timerEnd {
-				defer { currentTime = timer.getTime() }
-				passage.append((currentTime, isOn))
-				guard shouldPulse else { continue }
-				guard currentTime > lastPulse + 13158 else { continue }
-				pin.value = isOn ? 0 : 1
-				isOn.toggle()
-				lastPulse = currentTime
+			if currentTime >= nextDataToggle {
+				shouldPulse.toggle()
+				dataIndex += 1
+				nextDataToggle = currentTime + nsData[dataIndex]
+				dataOut.append(currentTime)
 			}
-			pin.value = 0
+
+			defer { passage.append((currentTime, isOn)) }
+			guard shouldPulse || isOn else { continue }
+			pin.value = isOn ? 0 : 1
+			isOn.toggle()
+			nextToggle = currentTime + nsHalfPeriod
 		}
 
-
-
-
+		pin.value = 0
 
 
 //		for i in 0..<50 {
@@ -106,14 +135,26 @@ struct IR_Controller: AsyncParsableCommand {
 //			passage.append((Self.timer.getTime(), false))
 //		}
 
-		var previousTime = passage[0].0
-		for (time, isOn) in passage[1...] {
-			let elapsed = time - previousTime
+//		var previousTime = passage[0].0
+//		for (time, isOn) in passage[1...] {
+//			let elapsed = time - previousTime
 //			print("\(elapsed) nanoseconds, \(isOn)")
-			print("\(elapsed / 1000) microseconds, \(isOn)")
-			previousTime = time
+////			print("\(elapsed / 1000) microseconds, \(isOn)")
+//			previousTime = time
+//		}
+////		print("\((passage.last!.0 - passage.first!.0) / 1000) total")
+//		print("\(passage.last!.0 - passage.first!.0) total")
+
+		var previousDataTime = dataOut[0]
+		for time in dataOut[1...] {
+			let elapsed = time - previousDataTime
+//			print("\(elapsed) nanoseconds")
+			print("\(elapsed / 1000) microseconds")
+			previousDataTime = time
 		}
-		print("\((passage.last!.0 - passage.first!.0) / 1000) total")
+		let expected = Self.data.map(Int.init).reduce(0, +)
+		print("\((dataOut.last! - dataOut.first!) / 1000) total, \(expected) expected")
+//		print("\(passage.last!.0 - passage.first!.0) total")
 	}
 
 //	private func lut(_ time: Int, table: Table) {
