@@ -12,18 +12,19 @@ let pwms = SwiftyGPIO.hardwarePWMs(for: .RaspberryPi4)
 @main
 struct IR_Controller: AsyncParsableCommand {
 	mutating func run() async throws {
-		let pwm = pwms?[1]?[.P13]
+		guard
+			let pwm = pwms?[1]?[.P13]
+		else { throw IRError.noPWM }
 
-		let data: [UInt8] = [
-			180,  80,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10
-		]
+		pwm.initPWM()
 
 		while true {
-			pwm?.initPWMPattern(bytes: data.count, at: 38000, with: 6000, dutyzero: 33, dutyone: 66)
-
-			pwm?.sendDataWithPattern(values: data)
-			pwm?.waitOnSendData()
-			pwm?.cleanupPattern()
+//			pwm?.initPWMPattern(bytes: data.count, at: 38000, with: 6000, dutyzero: 33, dutyone: 66)
+//
+//			pwm?.sendDataWithPattern(values: data)
+//			pwm?.waitOnSendData()
+//			pwm?.cleanupPattern()
+			signal(pwm: pwm)
 			sleep(1)
 		}
 
@@ -36,5 +37,28 @@ struct IR_Controller: AsyncParsableCommand {
 //			gpios[.P4]?.value = 0
 //			sleep(1)
 //		}
+	}
+
+	func signal(pwm: PWMOutput) {
+		let data: [UInt32] = [
+			180,  80,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10
+		].map { $0 * 1000 }
+		var isOn = false
+
+		for period in data {
+			if isOn {
+				isOn = false
+				pwm.stopPWM()
+				usleep(period)
+			} else {
+				isOn = true
+				pwm.startPWM(period: 26316, duty: 50)
+				usleep(period)
+			}
+		}
+	}
+
+	enum IRError: Error {
+		case noPWM
 	}
 }
