@@ -40,22 +40,29 @@ struct IR_Controller: AsyncParsableCommand {
 	}
 
 	func signal(pwm: PWMOutput) {
-		let data: [UInt32] = [
-			180,  80,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10
-		].map { $0 * 1000 }
-		var isOn = false
-
-		for period in data {
-			if isOn {
-				isOn = false
-				pwm.stopPWM()
-				usleep(period)
-			} else {
-				isOn = true
-				pwm.startPWM(period: 26316, duty: 50)
-				usleep(period)
-			}
-		}
+//		let data: [UInt32] = [
+//			180,  80,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10,  30,  10
+//		].map { $0 * 1000 }
+//		var isOn = false
+//
+//		for period in data {
+//			if isOn {
+//				isOn = false
+//				pwm.stopPWM()
+//				usleep(period)
+//			} else {
+//				isOn = true
+//				pwm.startPWM(period: 26316, duty: 50)
+//				usleep(period)
+//			}
+//		}
+		print("Starting")
+		pwm.startPWM(period: 26316, duty: 50)
+		sleep(2)
+		print("Stopping")
+		pwm.stopPWM()
+		sleep(2)
+		pwm.waitOnSendData()
 	}
 
 	enum IRError: Error {
