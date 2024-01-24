@@ -21,35 +21,35 @@ struct IR_Controller: AsyncParsableCommand {
 	private static let timer = PrecisionTimer()
 
 	mutating func run() async throws {
-		guard
-			let pwm = pwms?[1]?[.P13]
-		else { throw IRError.noPWM }
+//		guard
+//			let pwm = pwms?[1]?[.P13]
+//		else { throw IRError.noPWM }
 
 //		pwm.initPWM()
 
-//		guard
-//			let pin = gpios[.P13]
-//		else { throw IRError.noGPIO }
-//		pin.direction = .OUT
-//
-//		while true {
-//			print("Start")
-//			nonsignal(pin: pin)
-//			print("Stop")
-//			sleep(2)
-//		}
+		guard
+			let pin = gpios[.P13]
+		else { throw IRError.noGPIO }
+		pin.direction = .OUT
 
 		while true {
-			print("sending")
-			pwm.initPWMPattern(bytes: Self.data.count, at: 38000, with: 6000, dutyzero: 66, dutyone: 33)
-
-			pwm.sendDataWithPattern(values: Self.data)
-			pwm.waitOnSendData()
-			pwm.cleanupPattern()
-//			signal(pwm: pwm)
-			print("sent")
-			sleep(1)
+			print("Start")
+			nonsignal(pin: pin)
+			print("Stop")
+			sleep(2)
 		}
+
+//		while true {
+//			print("sending")
+//			pwm.initPWMPattern(bytes: Self.data.count, at: 38000, with: 6000, dutyzero: 66, dutyone: 33)
+//
+//			pwm.sendDataWithPattern(values: Self.data)
+//			pwm.waitOnSendData()
+//			pwm.cleanupPattern()
+////			signal(pwm: pwm)
+//			print("sent")
+//			sleep(1)
+//		}
 
 //		gpios[.P4]?.direction = .OUT
 //		print("Hello, world!")
@@ -63,27 +63,101 @@ struct IR_Controller: AsyncParsableCommand {
 	}
 
 	func nonsignal(pin: GPIO) {
+		let timer = Self.timer
+
 		pin.value = 0
 		var passage: [(Int, Bool)] = .init(unsafeUninitializedCapacity: 100) { buffer, initializedCount in
 			initializedCount = 0
 		}
-		passage.append((Self.timer.getTime(), false))
+		passage.append((timer.getTime(), false))
 
-		for i in 0..<50 {
-			pin.value = 1
-			passage.append((Self.timer.getTime(), true))
+		let nsData = Self.data.map { Int($0) * 1000 }
+
+		var shouldPulse = true
+		for datum in nsData {
+			let dataStart = timer.getTime()
+			let timerEnd = dataStart + datum
+			defer { shouldPulse.toggle() }
+			
+			var isOn = false
+			var currentTime = timer.getTime()
+			var lastPulse = currentTime
+			while currentTime < timerEnd {
+				defer { currentTime = timer.getTime() }
+				passage.append((currentTime, isOn))
+				guard shouldPulse else { continue }
+				guard currentTime > lastPulse + 13158 else { continue }
+				pin.value = isOn ? 0 : 1
+				isOn.toggle()
+				lastPulse = currentTime
+			}
 			pin.value = 0
-			passage.append((Self.timer.getTime(), false))
 		}
+
+
+
+
+
+
+//		for i in 0..<50 {
+//			pin.value = 1
+//			passage.append((Self.timer.getTime(), true))
+//			pin.value = 0
+//			passage.append((Self.timer.getTime(), false))
+//		}
 
 		var previousTime = passage[0].0
 		for (time, isOn) in passage[1...] {
 			let elapsed = time - previousTime
-			print("\(elapsed) nanoseconds, \(isOn)")
+//			print("\(elapsed) nanoseconds, \(isOn)")
+			print("\(elapsed / 1000) microseconds, \(isOn)")
 			previousTime = time
 		}
-		print("\(passage.last!.0 - passage.first!.0) total")
+		print("\((passage.last!.0 - passage.first!.0) / 1000) total")
 	}
+
+//	private func lut(_ time: Int, table: Table) {
+//
+//	}
+
+//	class Table {
+//		let timer: PrecisionTimer
+//
+//		let startTime: Int
+//		let microsecondData: [UInt8]
+//		let firstPulseIsOn: Bool
+//		let hertz: Int
+//
+//		let lut: [(Int, Bool)]
+//
+//		init(timer: PrecisionTimer, microsecondData: [UInt8], firstPulseIsOn: Bool, hertz: Int) {
+//			self.timer = timer
+//			self.microsecondData = microsecondData
+//			self.firstPulseIsOn = firstPulseIsOn
+//			self.hertz = hertz
+//
+//			let nsPeriod = (1.0 * 1_000_000_000) / Double(hertz)
+//			let halfPeriod = nsPeriod / 2
+//
+//			let timeNow = timer.getTime()
+//			self.startTime = timeNow
+//
+//			let delay = 2000
+//
+//			var currentPulse = firstPulseIsOn
+//			var values: [(Int, Bool)] = []
+//			var timeTracker = timeNow + delay
+//			for datum in microsecondData {
+//				let pulse = (Int(datum) * 1000) / hertz
+//				for i in 0..<hertz {
+//					values.append((timeTracker, currentPulse))
+//
+//					timeTracker += nsPrecision
+//				}
+//
+//			}
+//		}
+//	}
 
 //	func signal(pwm: PWMOutput) {
 //		let data = Self.data.map { $0 * 1000 }
