@@ -10,12 +10,12 @@
       }
     },
     {
-      "identity" : "swiftygpio",
+      "identity" : "swiftserial",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/uraimo/SwiftyGPIO.git",
+      "location" : "https://github.com/mredig/swiftserial.git",
       "state" : {
-        "revision" : "581eba393b291fd6d708b63d5a1545a31a23311c",
-        "version" : "1.4.1"
+        "branch" : "background-read",
+        "revision" : "1860264e3a23a6735a4e360dd22aba2197141ed0"
       }
     }
   ],
