@@ -12,11 +12,13 @@ let pwms = SwiftyGPIO.hardwarePWMs(for: .RaspberryPi4)
 @main
 struct IR_Controller: AsyncParsableCommand {
 
-	let data: [UInt32] = [
+	private static let data: [UInt32] = [
 		180, 80, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 30, 10, 30, 10, 30, 10, 30,
 		10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
 		10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10, 30, 10
 	]
+
+	private static let timer = PrecisionTimer()
 
 	mutating func run() async throws {
 //		guard
@@ -61,22 +63,20 @@ struct IR_Controller: AsyncParsableCommand {
 	}
 
 	func nonsignal(pin: GPIO) {
-		var ts = timespec()
+//		var ts = timespec()
 
 		pin.value = 0
 		var passage: [(Int, Bool)] = .init(unsafeUninitializedCapacity: 100) { buffer, initializedCount in
 			initializedCount = 0
 		}
-		clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-		passage.append((ts.tv_nsec, false))
+//		clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
+		passage.append((Self.timer.getTime(), false))
 
 		for i in 0..<50 {
 			pin.value = 1
-			clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-			passage.append((ts.tv_nsec, true))
+			passage.append((Self.timer.getTime(), true))
 			pin.value = 0
-			clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
-			passage.append((ts.tv_nsec, false))
+			passage.append((Self.timer.getTime(), false))
 		}
 
 		var previousTime = passage[0].0
@@ -90,7 +90,7 @@ struct IR_Controller: AsyncParsableCommand {
 	}
 
 	func signal(pwm: PWMOutput) {
-		let data = self.data.map { $0 * 1000 }
+		let data = Self.data.map { $0 * 1000 }
 
 		var ts = timespec()
 
@@ -155,5 +155,14 @@ struct IR_Controller: AsyncParsableCommand {
 	enum IRError: Error {
 		case noPWM
 		case noGPIO
+	}
+
+	class PrecisionTimer {
+		private var ts = timespec()
+
+		func getTime() -> Int {
+			clock_gettime(CLOCK_MONOTONIC_RAW, &ts)
+			return ts.tv_nsec
+		}
 	}
 }
