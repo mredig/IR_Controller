@@ -175,13 +175,12 @@ void processInput(int charCount) {
   } else {
     Serial.println("Unknown command.");
   }
-  delay(10);
 }
 
 void sendSignal(uint8_t data[]) {
-  int count = 3;
+  int count = 5;
   for (int i = 0; i < count; i ++) {
     IrSender.sendRaw(data, 68, 38);
-    delay(20);
+    delay(100);
   }
 }
