@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - 8081:8080
+    devices:
+      - /dev/ttyAMA0:/dev/ttyAMA0
+    command: ["/dev/ttyAMA0"]
