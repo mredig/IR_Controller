@@ -1,9 +1,9 @@
 FROM swift:5.9
 
 WORKDIR /server
-COPY Package.swift
-COPY Package.resolved
-COPY Sources
+COPY Package.swift .
+COPY Package.resolved .
+COPY Sources .
 
 WORKDIR /server
 
