@@ -5,7 +5,7 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
-    image: mredig/IR_Controller:latest
+    image: mredig/led_controller:latest
     restart: unless-stopped
     ports:
       - 8081:8080
