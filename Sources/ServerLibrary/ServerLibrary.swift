@@ -50,6 +50,7 @@ public extension HBApplication {
 		let group = router.group("control")
 
 		group.get("on") { _ in
+			taskTracker.clearTask()
 			_ = try serialPort.writeString("on")
 
 			return HBResponse(
@@ -59,6 +60,7 @@ public extension HBApplication {
 		}
 
 		group.get("off") { _ in
+			taskTracker.clearTask()
 			_ = try serialPort.writeString("off")
 
 			return HBResponse(
