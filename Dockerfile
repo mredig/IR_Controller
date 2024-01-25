@@ -39,16 +39,16 @@ RUN export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true \
     && rm -r /var/lib/apt/lists/*
 
 # Create a hummingbird user and group with /app as its home directory
-RUN useradd --user-group --create-home --system --skel /dev/null --home-dir /app hummingbird
+# RUN useradd --user-group --create-home --system --skel /dev/null --home-dir /app hummingbird
 
 # Switch to the new home directory
 WORKDIR /app
 
 # Copy built executable and any staged resources from builder
-COPY --from=build --chown=hummingbird:hummingbird /staging /app
+COPY --from=build /staging /app
 
 # Ensure all further commands run as the hummingbird user
-USER hummingbird:hummingbird
+# USER hummingbird:hummingbird
 
 # Let Docker bind to port 8080
 EXPOSE 8080
